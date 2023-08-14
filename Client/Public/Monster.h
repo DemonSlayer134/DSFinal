@@ -29,7 +29,7 @@ public:
 
 public:
 	void Get_PlayerComponent();
-
+		
 public: // Calculate
 	void  Calculate_To_Player();
 
@@ -42,7 +42,9 @@ protected:
 	//플레이어 정보 calculate
 	_float			m_fDistance_To_Player;
 	_float4		m_PlayerPos;
+	_float4		m_Dir_To_Monster;
 	_float4		m_Dir_To_Player;
+	_float4		m_Dir_To_Player_FixY;
 	
 
 
@@ -68,8 +70,7 @@ protected:
 	_float	m_fOutlineFaceThickness = 0.3f;
 protected:
 	CTransform* m_pPlayerTransformCom = { nullptr };
-
-
+	
 protected:
 	HRESULT Add_Components();
 	HRESULT	SetUp_ShaderResources();

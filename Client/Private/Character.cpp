@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "..\Public\Character.h"
-
+#include "Camera_Free.h"
 #include "GameInstance.h"
 
 #include "AtkCollManager.h"
@@ -13,6 +13,32 @@ CCharacter::CCharacter(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 CCharacter::CCharacter(const CCharacter& rhs)
 	: CLandObject(rhs)
 {
+}
+
+void CCharacter::Add_HitCollider(CGameObject* pAtkColl)
+{
+	if (nullptr == pAtkColl)
+		return;
+
+	if (1 > m_HitCollider.size())
+		m_HitCollider.emplace_back(dynamic_cast<CAtkCollider*>(pAtkColl));
+	else
+	{
+		_uint iCount = { 0 };
+
+		for (auto iter = m_HitCollider.begin(); iter != m_HitCollider.end(); iter++)
+		{
+			if (pAtkColl == (*iter))
+				break;
+
+			iCount++;
+		}
+
+		if (m_HitCollider.size() <= iCount)
+		{
+			m_HitCollider.emplace_back(dynamic_cast<CAtkCollider*>(pAtkColl));
+		}
+	}
 }
 
 HRESULT CCharacter::Initialize(void* pArg)
@@ -42,6 +68,7 @@ HRESULT CCharacter::Initialize(void* pArg)
 
 		m_fLand_Y = m_CharacterDesc.Land_Y;
 		m_eCurNavi = m_CharacterDesc.eCurNavi;
+		m_eNextNavi = m_eCurNavi;
 	}
 
 	return S_OK;
@@ -50,6 +77,20 @@ HRESULT CCharacter::Initialize(void* pArg)
 void CCharacter::Tick(_double dTimeDelta)
 {
 	__super::Tick(dTimeDelta);
+
+	Check_HitCollDead();
+	Check_HitType();
+
+	CGameInstance* pGameInstance = CGameInstance::GetInstance();
+	Safe_AddRef(pGameInstance);
+
+	if (pGameInstance->Get_CurLevelIdx() == LEVEL_VILLAGE || pGameInstance->Get_CurLevelIdx() == LEVEL_HOUSE) {
+		m_pTransformCom->Scaling(_float3(0.67f, 0.67f, 0.67f));
+	}
+	
+
+	Safe_Release(pGameInstance);
+
 
 	for (_uint i = 0; i < COLL_END; i++)
 		m_pColliderCom[i]->Tick(m_pTransformCom->Get_WorldMatrix(), dTimeDelta);
@@ -71,6 +112,11 @@ void CCharacter::LateTick(_double dTimeDelta)
 HRESULT CCharacter::Render()
 {
 	return S_OK;
+}
+
+CTransform* CCharacter::Get_TransformCom()
+{
+	return m_pTransformCom;
 }
 
 HRESULT CCharacter::Read_Animation_Control_File(const char* szBinfilename)
@@ -275,7 +321,7 @@ void CCharacter::Go_Dir_Constant(_double dTimeDelta, _int AnimIndex, _float cons
 {
 	if (AnimIndex == m_pModelCom->Get_iCurrentAnimIndex())
 	{
-		m_pTransformCom->Go_Dir(dTimeDelta * constantSpeed, XMLoadFloat4(&Dir));
+		m_pTransformCom->Go_Dir(dTimeDelta * constantSpeed, XMLoadFloat4(&Dir), m_pNavigationCom[m_eCurNavi]);
 	}
 }
 
@@ -299,7 +345,7 @@ void CCharacter::Go_Left_Constant(_double dTimeDelta, _int AnimIndex, _float con
 {
 	if (AnimIndex == m_pModelCom->Get_iCurrentAnimIndex())
 	{
-		m_pTransformCom->Go_Left(dTimeDelta * constantSpeed);
+		m_pTransformCom->Go_Left(dTimeDelta * constantSpeed, m_pNavigationCom[m_eCurNavi]);
 	}
 }
 
@@ -307,7 +353,7 @@ void CCharacter::Go_Right_Constant(_double dTimeDelta, _int AnimIndex, _float co
 {
 	if (AnimIndex == m_pModelCom->Get_iCurrentAnimIndex())
 	{
-		m_pTransformCom->Go_Right(dTimeDelta * constantSpeed);
+		m_pTransformCom->Go_Right(dTimeDelta * constantSpeed, m_pNavigationCom[m_eCurNavi]);
 	}
 }
 
@@ -358,10 +404,18 @@ void CCharacter::Go_Dir_Constant(_double dTimeDelta, DIR Dir, _uint iAnimindex, 
 	
 }
 
+void CCharacter::Navigation_To_Ground(_double dTimeDelta)
+{
+
+
+}
+
 void CCharacter::Gravity(_double dTimeDelta)
 {
 	_float4 Pos;
 	XMStoreFloat4(&Pos, m_pTransformCom->Get_State(CTransform::STATE_POSITION));
+
+	
 
 	//점프 상태
 	if (m_isJumpOn)
@@ -455,6 +509,75 @@ void CCharacter::Make_AttackColl(const _tchar* pLayerTag, _float3 Size, _float3 
 	CAtkCollManager::GetInstance()->Reuse_Collider(pLayerTag, &AtkCollDesc);
 }
 
+void CCharacter::Check_HitCollDead()
+{
+	for (auto iter = m_HitCollider.begin(); iter != m_HitCollider.end();)
+	{
+		if (true == (*iter)->Get_Dead())
+		{
+			iter = m_HitCollider.erase(iter);
+			continue;
+		}
+
+		++iter;
+	}
+}
+
+void CCharacter::Check_HitType()
+{
+	for (auto& pHitColl : m_HitCollider)
+	{
+		if (false == pHitColl->Get_IsAttack(this))
+		{
+			if (pHitColl->Get_Collider()->Get_Hit_Small())
+			{
+				m_pColliderCom[COLL_SPHERE]->Set_Hit_Small(true);
+			}
+			else if (pHitColl->Get_Collider()->Get_Hit_Big())
+			{
+				m_pColliderCom[COLL_SPHERE]->Set_Hit_Big(true);
+			}
+			else if (pHitColl->Get_Collider()->Get_Hit_Blow())
+			{
+				m_pColliderCom[COLL_SPHERE]->Set_Hit_Blow(true);
+			}
+			else if (pHitColl->Get_Collider()->Get_Hit_Spin())
+			{
+				m_pColliderCom[COLL_SPHERE]->Set_Hit_Spin(true);
+			}
+
+			pHitColl->Add_AtkObejct(this);
+		}
+	}
+}
+
+void CCharacter::Set_Height()
+{
+	m_fLand_Y = m_pNavigationCom[m_eCurNavi]->Compute_Height(m_pTransformCom);
+
+	CGameInstance* pGameInstance = CGameInstance::GetInstance();
+	Safe_AddRef(pGameInstance);
+
+	if (LEVEL_TRAIN == pGameInstance->Get_CurLevelIdx())
+	{
+		_float vPosX = XMVectorGetX(m_pTransformCom->Get_State(CTransform::STATE_POSITION));
+
+		m_fLand_Y -= fabsf(vPosX - 205.15f) * 0.15f;
+	}
+
+	Safe_Release(pGameInstance);
+}
+
+void CCharacter::Camera_Shake(_double dShakeTime, _uint iShakePower)
+{
+	CGameInstance* pGameInstance = CGameInstance::GetInstance();
+	Safe_AddRef(pGameInstance);
+
+	CCamera_Free* pCamera = dynamic_cast<CCamera_Free*>(pGameInstance->Get_GameObject(pGameInstance->Get_CurLevelIdx(), TEXT("Layer_Camera")));
+	pCamera->Shake(dShakeTime, iShakePower);
+
+	Safe_Release(pGameInstance);
+}
 
 HRESULT CCharacter::Add_Components()
 {
@@ -466,66 +589,7 @@ HRESULT CCharacter::Add_Components()
 		return E_FAIL;
 	}
 
-	/*
-	m_CharacterDesc.TransformDesc.dSpeedPerSec = 5.0;
-	m_CharacterDesc.TransformDesc.dRadianRotationPerSec = (_double)XMConvertToRadians(90.f);
-	// for.Com_Transform 
-	if (FAILED(__super::Add_Component(LEVEL_STATIC, TEXT("Prototype_Component_Transform"),
-		TEXT("Com_Transform"), (CComponent**)&m_pTransformCom, &m_CharacterDesc.TransformDesc)))
-	{
-		MSG_BOX("Failed to Add_Com_Transform : CCharacter");
-		return E_FAIL;
-	}
 
-
-	m_CharacterDesc.ColliderDesc[CCharacter::COLL_AABB].vSize = _float3(1.f, 1.f, 1.f);
-	m_CharacterDesc.ColliderDesc[CCharacter::COLL_AABB].vPosition = _float3(0.f, m_CharacterDesc.ColliderDesc[CCharacter::COLL_AABB].vSize.y * 0.5f, 0.f);
-	//for.Com_AABB 
-	if (FAILED(__super::Add_Component(LEVEL_GAMEPLAY, TEXT("Prototype_Component_Collider_AABB"),
-		TEXT("Com_AABB"), (CComponent**)&m_pColliderCom[COLL_AABB], &m_CharacterDesc.ColliderDesc[COLL_AABB])))
-	{
-		MSG_BOX("Failed to Add_Com_AABB : CCharacter");
-		return E_FAIL;
-	}
-
-
-
-	m_CharacterDesc.ColliderDesc[CCharacter::COLL_OBB].vSize = _float3(1.f, 2.f, 1.f);
-	m_CharacterDesc.ColliderDesc[CCharacter::COLL_OBB].vRotation = _float3(0.f, XMConvertToRadians(45.f), 0.f);
-	m_CharacterDesc.ColliderDesc[CCharacter::COLL_OBB].vPosition = _float3(0.f, m_CharacterDesc.ColliderDesc[CCharacter::COLL_OBB].vSize.y * 0.5f, 0.f);
-	//for.Com_OBB 
-	if (FAILED(__super::Add_Component(LEVEL_GAMEPLAY, TEXT("Prototype_Component_Collider_OBB"),
-		TEXT("Com_OBB"), (CComponent**)&m_pColliderCom[COLL_OBB], &m_CharacterDesc.ColliderDesc[COLL_OBB])))
-	{
-		MSG_BOX("Failed to Add_Com_OBB : CCharacter");
-		return E_FAIL;
-	}
-
-
-
-	m_CharacterDesc.ColliderDesc[CCharacter::COLL_SPHERE].vSize = _float3(1.f, 1.f, 1.f);
-	m_CharacterDesc.ColliderDesc[CCharacter::COLL_SPHERE].vPosition = _float3(0.f, 0.0f, 0.f);
-	//m_CharacterDesc.ColliderDesc[CCharacter::COLL_SPHERE].vPosition = _float3(0.f, m_CharacterDesc.ColliderDesc[CCharacter::COLL_SPHERE].vSize.x, 0.f);
-	// for.Com_Sphere 
-	if (FAILED(__super::Add_Component(LEVEL_GAMEPLAY, TEXT("Prototype_Component_Collider_Sphere"),
-		TEXT("Com_Sphere"), (CComponent**)&m_pColliderCom[COLL_SPHERE], &m_CharacterDesc.ColliderDesc[COLL_SPHERE])))
-	{
-		MSG_BOX("Failed to Add_Com_Sphere : CCharacter");
-		return E_FAIL;
-	}
-
-	*/
-
-
-	//m_CharacterDesc.NaviDesc.iCurrentIndex = 0;
-	////m_CharacterDesc.NaviDesc.vStartPosition = XMVectorSet(0.f, 0.f, 0.f, 1.f);
-	///* for.Com_Navigation */
-	//if (FAILED(__super::Add_Component(LEVEL_GAMEPLAY, TEXT("Prototype_Component_Navigation"),
-	//	TEXT("Com_Navigation"), (CComponent**)&m_pNavigationCom, &m_CharacterDesc.NaviDesc)))
-	//{
-	//	MSG_BOX("Failed to Add_Com_Navigation : CCharacter");
-	//	return E_FAIL;
-	//}
 
 	return S_OK;
 }
@@ -546,6 +610,8 @@ void CCharacter::Tick_Collider(_double dTimeDelta)
 void CCharacter::Free()
 {
 	__super::Free();
+
+	m_HitCollider.clear();
 
 	for (_uint i = 0; i < COLL_END; i++)
 		Safe_Release(m_pColliderCom[i]);

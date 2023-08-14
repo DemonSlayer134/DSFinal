@@ -50,11 +50,17 @@ protected:
 	virtual ~CCharacter() = default;
 
 public:
+	void Add_HitCollider(CGameObject* pAtkColl);
+
+public:
 	//virtual HRESULT Initialize_Prototype() override;
 	virtual HRESULT Initialize(void* pArg) override;
 	virtual void	Tick(_double dTimeDelta) override;
 	virtual void	LateTick(_double dTimeDelta) override;
 	virtual HRESULT Render() override;
+
+public:
+	CTransform* Get_TransformCom();
 
 protected:
 	HRESULT	Read_Animation_Control_File(const char* szBinfilename);
@@ -77,20 +83,30 @@ protected:
 	void	Go_Straight_Deceleration_Common(_double dTimeDelta, _float ResetSpeed, _float fDecrease);
 
 	void	Go_Dir_Constant(_double dTimeDelta, DIR Dir, _uint iAnimindex, _float fSpeed, _double dStartRatio = 0.0, _double dEndRatio = 1.0);
-	
+
+	void	Navigation_To_Ground(_double dTimeDelta);
 	void	Gravity(_double dTimeDelta);
 	void	Ground_Animation_Play(_int CurAnim, _int GroundAnim);
 	void	Jumping( _float ResetSpeed, _float fFallDecrease);
 	void	JumpStop(_double dDuration);
 
-	//콜라이더 관련
+	//콜라이더 관련`
 	void	Make_AttackColl(const _tchar* pLayerTag, _float3 Size, _float3 Pos, _double DurationTime, CAtkCollider::ATK_TYPE AtkType, _vector vDir, _float fDmg);
+	void	Check_HitCollDead();
+	void	Check_HitType();
 
 protected:
 	void	Set_FallingStatus(_float fFallSpeed, _float fGravityAcc) { m_fJump_Acc = -fFallSpeed; m_fGravity_Fall = fGravityAcc; }
+
+protected:	 
+	// 네비매쉬 높이설정(안원추가)
+	void	Set_Height();
+protected: // 카메라 쉐이크
+	void Camera_Shake(_double dShakeTime = 0.5, _uint iShakePower = 100);
 	
 protected:
 	CHARACTERDESC	m_CharacterDesc;
+	list<class CAtkCollider*>	m_HitCollider; 
 
 protected:
 	CModel* m_pModelCom = { nullptr };		
@@ -103,11 +119,12 @@ protected:
 protected:
 	CHAR_STATUS  m_StatusDesc;
 
+
+
 protected:
 	_float4		m_Save_RootPos = { 0.0f, 0.0f, 0.0f, 1.0f };
 
-	//스케일값 비율
-	_float		m_fFix_Size = { 0.80f };
+	
 
 	//Attack MoveControl
 	_float	m_fAtk_MoveControl = { 0.0f };
@@ -118,7 +135,9 @@ protected:
 	_double m_dDelay_Fall = { 0.0 };
 	_bool	m_isJumpOn = { false };
 	_float	m_fJump_Acc = { 0.0f };
-	_float	m_fLand_Y = { 0.0f };
+	
+	_float	m_fLand_Y = { 0.0f }; // 땅의 y위치임.
+	_bool	m_isLand_Roof = { false };
 
 	_bool	m_isJumpStop = { false };
 	_double m_dTime_JumpStop = { 0.0 };
@@ -133,7 +152,6 @@ protected:
 	HRESULT Add_Components();
 	void	SetUp_Height();
 	void	Tick_Collider(_double dTimeDelta);
-
 
 public:
 	//virtual CGameObject* Clone(void* pArg) override = 0;

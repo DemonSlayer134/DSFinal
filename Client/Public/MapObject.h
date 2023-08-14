@@ -78,6 +78,9 @@ protected:
 	HRESULT SetUp_ShaderResources();
 
 protected:
+	void	Scroll(_double TimeDelta);
+
+protected:
 	CShader* m_pShaderCom = { nullptr };
 	CRenderer* m_pRendererCom = { nullptr };
 	CTransform* m_pTransformCom = { nullptr };
@@ -87,6 +90,10 @@ protected:
 	_tchar					m_PrototypeObjectTag[MAX_PATH] = L"";
 
 	MAPOBJECT_INFO			m_MapObject_Info;
+
+protected:
+	_float					m_fTimeAcc = { 0.0f };
+	_float2					m_vPanningSpeed = { 0.f , 0.f };
 
 public:
 	virtual void Free() override;

@@ -36,6 +36,8 @@ HRESULT CCamera::Initialize(void* pArg)
 
 	m_pTransformCom->LookAt(XMLoadFloat4(&m_CameraDesc.vAt));
 
+	
+
 	return S_OK;
 }
 
@@ -44,12 +46,13 @@ void CCamera::Tick(_double dTimeDelta)
 	if (nullptr == m_pPipeLine)
 		return;
 	// Camera_Shake
-	//Tick_Shake(dTimeDelta);
+	Tick_Shake(dTimeDelta);
 
 	m_pPipeLine->Set_Transform(CPipeLine::D3DTS_VIEW, m_pTransformCom->Get_WorldFloat4x4_Inverse());
 
 	_float4x4 ProjMatrix;
 
+	
 	XMStoreFloat4x4(&ProjMatrix, XMMatrixPerspectiveFovLH(m_CameraDesc.fFovY, m_CameraDesc.fAspect, m_CameraDesc.fNearZ, m_CameraDesc.fFarZ));
 
 	m_pPipeLine->Set_Transform(CPipeLine::D3DTS_PROJ, ProjMatrix);
@@ -78,8 +81,7 @@ void CCamera::Tick_Shake(_double TimeDelta)
 			_vector vShake = { fX, fY, fZ, 0.f };
 
 			_vector vCamPos = m_pTransformCom->Get_State(CTransform::STATE_POSITION);
-			_vector vCamLook = m_pTransformCom->Get_State(CTransform::STATE_LOOK);
-
+			
 			_vector vEye = vCamPos + vShake; // ½¦ÀÌÅ·
 			
 			m_pTransformCom->Set_State(CTransform::STATE_POSITION, vEye);

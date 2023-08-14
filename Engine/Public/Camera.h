@@ -10,15 +10,18 @@ class ENGINE_DLL CCamera abstract : public CGameObject
 public:
 	typedef struct tagCameraDesc{
 		
-		_float4		vEye;
-		_float4		vAt;
-		_float4		vAxisY;
-		
-		_float		fFovY, fAspect, fNearZ, fFarZ;
+		_float4		vEye = {};
+		_float4		vAt = {};
+		_float4		vAxisY = {};
+
+		_float		fFovY = {};
+		_float		fAspect = {};
+		_float		fNearZ = {};
+		_float		fFarZ = {};
 
 		_double		dSensitivity = { 0.5 };		//°¨µµ
 
-		CTransform::TRANSFORMDESC TransformDesc;
+		CTransform::TRANSFORMDESC TransformDesc = {};
 	}CAMERADESC;
 protected:
 	CCamera(ID3D11Device* pDevice, ID3D11DeviceContext* pContext);
@@ -43,7 +46,7 @@ public:
 	
 public:
 	void	Tick_Shake(_double TimeDelta);
-	void	Shake(const _double& ShakeTime = 0.3, const _int& iShakePower = 100); // default  time = 0.3 / power = 100
+	void	Shake(const _double& ShakeTime = 0.5, const _int& iShakePower = 100); // default  time = 0.5 / power = 100
 
 protected:
 	CTransform*			m_pTransformCom = { nullptr };

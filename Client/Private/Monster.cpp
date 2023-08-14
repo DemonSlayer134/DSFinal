@@ -70,8 +70,7 @@ void CMonster::Get_PlayerComponent()
 	Safe_AddRef(pGameInstance);
 
 	m_pPlayerTransformCom = dynamic_cast<CTransform*>(pGameInstance->Get_Component(pGameInstance->Get_CurLevelIdx(), TEXT("Layer_Player"), TEXT("Com_Transform")));
-	//m_pPlayerTransformCom = dynamic_cast<CTransform*>(pGameInstance->Get_Component(LEVEL_FINALBOSS, TEXT("Layer_Player"), TEXT("Com_Transform")));
-
+	
 	Safe_Release(pGameInstance);
 }
 
@@ -86,10 +85,17 @@ void CMonster::Calculate_To_Player()
 
 	_vector vDistance = XMVectorSubtract(m_pTransformCom->Get_State(CTransform::STATE_POSITION), vPlayerPos);
 	_vector vDir_To_Player = XMVector3Normalize(vDistance);
+
+	//FixY
+	_vector vMonsterPos = m_pTransformCom->Get_State(CTransform::STATE_POSITION);
+	_vector vTargetPosition = XMVectorSetY(vPlayerPos, XMVectorGetY(vMonsterPos));
+	_vector vDir_FixY = XMVector3Normalize(vTargetPosition - vMonsterPos);
 	
 	m_fDistance_To_Player = XMVectorGetX(XMVector3Length(vDistance));
 	XMStoreFloat4(&m_PlayerPos, vPlayerPos);
-	XMStoreFloat4(&m_Dir_To_Player, vDir_To_Player);
+	XMStoreFloat4(&m_Dir_To_Monster, vDir_To_Player);
+	XMStoreFloat4(&m_Dir_To_Player, -vDir_To_Player);
+	XMStoreFloat4(&m_Dir_To_Player_FixY, vDir_FixY);
 
 	Safe_Release(pGameInstance);
 }

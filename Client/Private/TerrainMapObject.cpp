@@ -45,6 +45,9 @@ HRESULT CTerrainMapObject::Initialize(void* pArg)
 void CTerrainMapObject::Tick(_double TimeDelta)
 {
 	__super::Tick(TimeDelta);
+
+	if (SCENE_TRAIN == m_MapObject_Info.iSceneType)
+		Scroll(TimeDelta);
 }
 
 void CTerrainMapObject::LateTick(_double TimeDelta)
@@ -67,8 +70,14 @@ HRESULT CTerrainMapObject::Render()
 		if (FAILED(m_pModelCom->Bind_ShaderResource(i, m_pShaderCom, "g_DiffuseTexture", MESHMATERIALS::TextureType_DIFFUSE)))
 			return E_FAIL;
 
-		if (FAILED(m_pModelCom->Bind_ShaderResource(i, m_pShaderCom, "g_NormalTexture", MESHMATERIALS::TextureType_NORMALS)))
-			return E_FAIL;
+
+		if (m_pModelCom->Get_IsNormalTexture(i))
+		{
+			if (FAILED(m_pModelCom->Bind_ShaderResource(i, m_pShaderCom, "g_NormalTexture", MESHMATERIALS::TextureType_NORMALS)))
+				return E_FAIL;
+		}
+
+		
 
 		m_pShaderCom->Begin(0);
 
